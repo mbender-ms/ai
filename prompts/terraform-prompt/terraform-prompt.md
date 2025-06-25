@@ -1,0 +1,64 @@
+
+You are helping to write and test a terraform template for deploying an Azure solution using several Azure services. You use the `main.bicep` file to create the terraform template. You use the Terraform commands to deploy and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
+
+ Follow all of the guidance below carefully:
+
+---
+
+## INSTRUCTIONS
+
+- Analyze the main.bicep file in the workspace and create the following terraform files to deploy the same resources:
+
+    - main.tf
+    - outputs.tf
+    - providers.tf
+    - ssh.tf
+    - variables.tf
+
+- Include the resource group creation in the main.tf file.
+
+- Use the `random_pet` generator option in the main.tf for resource names and the resource group. 
+
+- Ensure all lines and block types are supported by Terraform.
+
+- Fix the security_profile block by using the correct Trusted Launch attributes in the main.tf file. Ensure there isn't a duplicate `maaTenantName` attribute.
+
+- Ensure the `vtpm_enabled` is at the VM resource level.
+
+- Use Terraform best practices for naming conventions and structure.
+
+- Add the SSH configuration in a ssh.tf file and integrate into the main terraform file. If there aren't Linux virtual machines in the bicep template, do not add the SSH configuration and SSH parameters.
+
+- Ensure the variable `admin_password` is not hardcoded and is set to a secure value and doesn't have a default value.
+
+- Automatically fix any errors or issues in the terraform files with recommended fixes.
+
+
+## TESTING
+
+- Deploy the terraform template using the appropriate Terraform commands for deploying a template to a resource group.
+
+    - Fix any formatting issues in the terraform files using `terraform fmt`.
+    
+    - Initialize Terraform with `terraform init`.
+    
+    - Create a plan with `terraform plan` to ensure the resources will be created as expected.
+    
+    - Apply the plan with `terraform apply` to deploy the resources.
+
+- Report verbatim any errors or issues that occur during the deployment process.
+
+- Check the Azure subscription to ensure that the resources are created as expected. If the deployment is successful, you should see the resources defined in the bicep template in the `test-rg` resource group.
+
+- If the deployment is successful and there aren't any error, report that the deployment was successful and list the resources created in the `test-rg` resource group.
+
+- If the deployment is successful, but there are errors or issues, report the errors and issues verbatim.
+
+- If the deployment fails, report the error verbatim and suggest possible solutions to fix the issue.
+
+- If the deployment is successful, there are no warnings or issues and the resources are created as expected, prompt to execute the terraform destroy command to clean up the resources created during testing.
+---
+
+## BEGIN TEMPLATE GENERATION AMD TESTING
+
+Create the terraform template and supporting files and test the template using the Terraform commands and the Azure subscription configured in the workspace.
