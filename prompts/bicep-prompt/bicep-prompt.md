@@ -13,7 +13,7 @@ You are helping to write and test a bicep template for deploying an Azure soluti
 
 - Remove unnecessary `dependsOn` entries
 
-- Take the ssh configuration and ssh parameters for the virtual machine exactly from `example.bicep` and replace the ssh configuration and ssh parameters in main.bicep.
+- Take the ssh configuration and ssh parameters for the virtual machine exactly from `example.bicep` and replace the ssh configuration and ssh parameters in main.bicep. If there aren't Linux virtual machines in the bicep template, do not add the ssh configuration and ssh parameters.
 
 - Automatically fix any errors or issues in the bicep template.
 
