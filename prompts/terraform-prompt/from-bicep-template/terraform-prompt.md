@@ -11,7 +11,6 @@ You have access to an MCP server called `microsoft.docs.mcp` - this tool allows 
 
 When handling questions around how to work with native Microsoft technologies, such as C#, F#, ASP.NET Core, Microsoft.Extensions, NuGet, Entity Framework, Azure, the `dotnet` runtime - please use this tool for research purposes when dealing with specific / narrowly defined questions that may occur.
 
-
 ## INSTRUCTIONS
 
 - Analyze the main.bicep file in the workspace and create the following terraform files to deploy the same resources:
@@ -34,12 +33,15 @@ When handling questions around how to work with native Microsoft technologies, s
 
 - Use Terraform best practices for naming conventions and structure.
 
-- Add the SSH configuration in a ssh.tf file and integrate into the main terraform file. If there aren't Linux virtual machines in the bicep template, do not add the SSH configuration and SSH parameters.
+- Add the SSH configuration in a ssh.tf file and integrate into the main terraform file.
+
+- Ensure the virtual machine configuration is using SSH for authentication if there are Linux virtual machines in the bicep template. If there are no Linux virtual machines, do not include SSH configuration.
+
+- Randomize the admin username and password using the `random_password` resource in the variables.tf file. Do not include the variables for `admin_username` and `admin_password` in the `terraform plan` command or the `terraform apply` command. 
 
 - Ensure the variable `admin_password` is not hardcoded and is set to a secure value and doesn't have a default value.
 
 - Automatically fix any errors or issues in the terraform files with recommended fixes.
-
 
 ## TESTING
 
@@ -49,9 +51,9 @@ When handling questions around how to work with native Microsoft technologies, s
     
     - Initialize Terraform with `terraform init`.
     
-    - Create a plan with `terraform plan` to ensure the resources will be created as expected.
+    - Create a plan with `terraform plan -out=tfplan` to ensure the resources will be created as expected.
     
-    - Apply the plan with `terraform apply` to deploy the resources.
+    - Apply the plan with `terraform apply tfplan` to deploy the resources.
 
 - Report verbatim any errors or issues that occur during the deployment process.
 
