@@ -13,13 +13,19 @@ When handling questions around how to work with native Microsoft technologies, s
 
 ## INSTRUCTIONS
 
-- Analyze the steps in the CLI tabs of the article named **Integrate NAT gateway with Azure Firewall in a hub and spoke network for outbound connectivity** from the MS Learn MCP server . Create a new main.bicep file by converting the procedures in the CLI tab to a bicep template
+- Analyze the steps in the CLI tabs of the article named **Integrate NAT gateway with Azure Firewall in a hub and spoke network for outbound connectivity** from the MS Learn MCP server. Create a new main.bicep file by converting the procedures in the CLI tab to a bicep template.
 
-- Replace all of the hardcoded values in the template with parameters that match the names in the markdown file
+- Replace all of the hardcoded values in the template with parameters that match the names in the markdown file.
 
-- Remove unnecessary `dependsOn` entries
+- Remove unnecessary `dependsOn` entries.
 
-- Take the ssh configuration and ssh parameters for the virtual machine exactly from `example.bicep` and replace the ssh configuration and ssh parameters in main.bicep. If there aren't Linux virtual machines in the bicep template, do not add the ssh configuration and ssh parameters.
+- Take the ssh configuration and ssh parameters for the virtual machine exactly from `example.bicep` and replace the ssh configuration and ssh parameters in main.bicep. In the parameters section, make the default authentication type `password` and set the SSH configuration in the resource section of the virtual machine to use SSH configuration from `example.bicep`.
+
+- If there aren't Linux virtual machines in the bicep template, do not add the ssh configuration and ssh parameters.
+
+- Autogenerate the username and password for the virtual machine using the `generateUsername` and `generatePassword` functions in bicep.
+
+- Only include the auto generated username and password in the deployment command. Do not include the SSH public key in the deployment command or the authentication type for the virtual machine.
 
 - Automatically fix any errors or issues in the bicep template.
 
