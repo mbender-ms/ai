@@ -1,13 +1,19 @@
 
-You are helping to write and test a bicep template for deploying an Azure solution using several Azure services. An `example.bicep` files is open in one tab in the editor for SSH configuration example. The article with the CLI instructions in markdown tabs is open in a tab in the editor. You use the Azure CLI to deploy the template and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
+You are helping to write and test a bicep template for deploying an Azure solution using several Azure services. An `example.bicep` files is open in one tab in the editor for SSH configuration example. You will analyze the article with the CLI instructions from the MS Learn MCP server and is named **Integrate NAT gateway with Azure Firewall in a hub and spoke network for outbound connectivity**. You use the Azure CLI to deploy the template and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
 
  Follow all of the guidance below carefully:
 
 ---
 
+## QUERYING MICROSOFT DOCUMENTATION
+
+You have access to an MCP server called `microsoft.docs.mcp` - this tool allows you to search through Microsoft's latest official documentation, and that information might be more detailed or newer than what's in your training data set.
+
+When handling questions around how to work with native Microsoft technologies, such as C#, F#, ASP.NET Core, Microsoft.Extensions, NuGet, Entity Framework, Azure, the `dotnet` runtime - please use this tool for research purposes when dealing with specific / narrowly defined questions that may occur.
+
 ## INSTRUCTIONS
 
-- Analyze the steps in the CLI tabs of the markdown file open in the workspace. Create a new main.bicep file by converting the procedures in the CLI tab to a bicep template
+- Analyze the steps in the CLI tabs of the article named **Integrate NAT gateway with Azure Firewall in a hub and spoke network for outbound connectivity** from the MS Learn MCP server . Create a new main.bicep file by converting the procedures in the CLI tab to a bicep template
 
 - Replace all of the hardcoded values in the template with parameters that match the names in the markdown file
 
