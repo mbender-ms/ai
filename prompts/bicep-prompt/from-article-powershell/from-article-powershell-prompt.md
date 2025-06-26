@@ -1,5 +1,5 @@
 
-You are helping to write and test a bicep template for deploying an Azure solution using several Azure services. An `example.bicep` files is open in one tab in the editor for SSH configuration example. You will analyze the article with the PowerShell instructions from the MS Learn MCP server and is named **Integrate NAT gateway with Azure Firewall in a hub and spoke network for outbound connectivity**. You use the Azure PowerShell to deploy the template and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
+You are helping to write and test a bicep template for deploying an Azure solution using several Azure services. An `example.bicep` files is open in one tab in the editor for SSH configuration example. You will analyze the article with the PowerShell instructions from the MS Learn MCP server and is named **Integrate NAT gateway with Azure Firewall in a hub and spoke network for outbound connectivity**. You use the CLI to deploy the template and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
 
 Follow all of the guidance below carefully:
 
@@ -22,8 +22,6 @@ When handling questions around how to work with native Microsoft technologies, s
 - Take the ssh configuration and ssh parameters for the virtual machine exactly from `example.bicep` and replace the ssh configuration and ssh parameters in main.bicep. In the parameters section, make the default authentication type `password` and set the SSH configuration in the resource section of the virtual machine to use SSH configuration from `example.bicep`.
 
 - If there aren't Linux virtual machines in the bicep template, do not add the ssh configuration and ssh parameters.
-
-- Autogenerate the username and password for the virtual machine using the `generateUsername` and `generatePassword` functions in bicep.
 
 - Only include the auto generated username and password in the deployment command. Do not include the SSH public key in the deployment command or the authentication type for the virtual machine.
 
@@ -51,4 +49,4 @@ When handling questions around how to work with native Microsoft technologies, s
 
 ## BEGIN TEMPLATE GENERATION AMD TESTING
 
-Create the template named `main.bicep' and test the template using the Azure PowerShell commands and the Azure subscription configured in the workspace.
+Create the template named `main.bicep' and test the template using the CLI commands and the Azure subscription configured in the workspace.
