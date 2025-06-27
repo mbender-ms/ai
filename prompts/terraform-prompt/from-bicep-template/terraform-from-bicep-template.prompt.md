@@ -20,7 +20,7 @@ variables:
     default: main.bicep
 ---
 
-You are helping to write and test a terraform template for deploying an Azure solution using several Azure services. You use the `{{bicep_file_name}}` file to create the terraform template. You use the Terraform commands to deploy and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
+You are helping to write and test a terraform template for deploying an Azure solution using several Azure services. You use the **${input:bicep_file_name}** file to create the terraform template. You use the Terraform commands to deploy and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
 
 Follow all of the guidance below carefully:
 
@@ -34,7 +34,7 @@ When handling questions around how to work with native Microsoft technologies, s
 
 ## INSTRUCTIONS
 
-- Analyze the {{bicep_file_name}} file in the workspace and create the following terraform files to deploy the same resources:
+- Analyze the ${input:bicep_file_name} file in the workspace and create the following terraform files to deploy the same resources:
 
     - main.tf
     - outputs.tf
