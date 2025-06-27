@@ -1,7 +1,27 @@
 
-You are helping to write and test a terraform template for deploying an Azure solution using several Azure services. You use the `main.bicep` file to create the terraform template. You use the Terraform commands to deploy and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
+---
+mode: 'agent'
+description: Generate and test a Terraform template by converting Azure CLI procedures from a Microsoft Learn article to Infrastructure as Code, including multiple terraform files (main.tf, outputs.tf, providers.tf, ssh.tf, variables.tf), parameter extraction, template deployment, and resource verification.
+tools:
+  - mcp_microsoft_doc_microsoft_docs_search
+  - azure_development-get_code_gen_best_practices
+  - azure_development-get_deployment_best_practices
+  - azure_terraform-get_best_practices
+  - azure_resources-query_azure_resource_graph
+  - azure_cli-generate_azure_cli_command
+  - run_in_terminal
+  - create_file
+  - read_file
+  - get_errors
+variables:
+  - name: article_name
+    description: The name of the Microsoft Learn article to analyze for CLI procedures
+    type: string
+---
 
- Follow all of the guidance below carefully:
+You are helping to write and test a terraform template for deploying an Azure solution using several Azure services. You will analyze the article with the CLI instructions from the MS Learn MCP server and is named **{{article_name}}**. You use the Terraform commands to deploy the template and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
+
+Follow all of the guidance below carefully:
 
 ---
 
@@ -13,7 +33,7 @@ When handling questions around how to work with native Microsoft technologies, s
 
 ## INSTRUCTIONS
 
-- Analyze the main.bicep file in the workspace and create the following terraform files to deploy the same resources:
+- Analyze the Azure CLI procedures in the CLI tabs of the article named **{{article_name}}** and create the following terraform files to deploy the same resources:
 
     - main.tf
     - outputs.tf
