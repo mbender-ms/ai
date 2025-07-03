@@ -3,6 +3,7 @@
 mode: 'agent'
 description: Generate and test a Bicep template by converting Azure portal procedures from a Microsoft Learn article to Infrastructure as Code, including parameter extraction, template deployment, and resource verification.
 tools:
+  - mcp_microsoft_doc_microsoft_docs_search
   - azure_development-get_code_gen_best_practices
   - azure_development-get_deployment_best_practices
   - azure_bicep_schemas-get_bicep_resource_schema
@@ -18,7 +19,7 @@ variables:
     type: string
 ---
 
-You are helping to write and test a bicep template for deploying an Azure solution using several Azure services. An `example.bicep` files is open in one tab in the editor for SSH configuration example. You will analyze the article with the Portal instructions from the MS Learn website https://learn.microsoft.com/en-us/azure/?product=popular and is named **${input:article_name}**. You use the Azure CLI to deploy the template and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
+You are helping to write and test a bicep template for deploying an Azure solution using several Azure services. An `example.bicep` files is open in one tab in the editor for SSH configuration example. You will analyze the article with the Portal instructions from the MS Learn MCP server and is named **${input:article_name}**. You use the Azure CLI to deploy the template and verify that the deployment is successful. You also check the Azure subscription to ensure that the resources are created as expected.
 
 Follow all of the guidance below carefully:
 
@@ -48,7 +49,6 @@ When handling questions around how to work with native Microsoft technologies, s
 
 - Automatically fix any errors or issues in the bicep template.
 
-- Don't create a main.parameters.json file. Instead, use the `--parameters` option in the Azure CLI command to pass the parameters to the bicep template.
 
 ## TESTING
 
