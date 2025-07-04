@@ -31,6 +31,14 @@ You have access to an MCP server called `microsoft.docs.mcp` - this tool allows 
 
 When handling questions around how to work with native Microsoft technologies, such as C#, F#, ASP.NET Core, Microsoft.Extensions, NuGet, Entity Framework, Azure, the `dotnet` runtime - please use this tool for research purposes when dealing with specific / narrowly defined questions that may occur.
 
+## ARTICLE ANALYSIS
+
+- Analyze the article and determine which deployment procedures are described in the article. Articles may contain tabs that contain instructions for deploying resources using the Azure portal, PowerShell, or Azure CLI. Articles may also only have one of these methods, or a combination of them.
+
+- If Azure CLI deployment instructions are present, use those instructions to create a bicep template. 
+
+- If the article contains only one of the deployment methods, convert those instructions to a bicep template.
+
 ## INSTRUCTIONS
 
 - Analyze the steps in the article named **${input:article_name}** from the MS Learn MCP server. Create a new main.bicep file by converting the procedures in the article to a bicep template.
