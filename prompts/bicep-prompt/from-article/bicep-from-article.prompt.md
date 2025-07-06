@@ -38,7 +38,9 @@ Follow all of the guidance below carefully:
 
 - Carefully follow all of the following instructions to create a bicep template based on the article.
 
-- Don't create a parameters file or a readme file. You aren't using the Azure developer CLI, so you don't need a azure.yaml file or deployment scripts.
+- Don't create a `main.parameters.json` file or a `README.md`file.
+
+- You aren't using the Azure developer CLI, don't create a `azure.yaml` file or deployment scripts.
 
 - Analyze the steps in the article named **${input:article_name}** from the MS Learn website. Create a new main.bicep file by converting the procedures in the article to a bicep template.
 
@@ -46,9 +48,13 @@ Follow all of the guidance below carefully:
 
 - Remove unnecessary `dependsOn` entries.
 
-- Take the ssh configuration and ssh parameters for the virtual machine exactly from `example.bicep` and replace the ssh configuration and ssh parameters in main.bicep. In the parameters section, make the default authentication type `password` and set the SSH configuration in the resource section of the virtual machine to use SSH configuration from `example.bicep`.
+- Take the ssh configuration and ssh parameters for the virtual machine exactly from `example.bicep` and replace the ssh configuration and ssh parameters in main.bicep. 
+
+- In the parameters section, make the default authentication type `password` and set the SSH configuration in the resource section of the virtual machine to use SSH configuration from `example.bicep`.
 
 - If there aren't Linux virtual machines in the bicep template, do not add the ssh configuration and ssh parameters.
+
+- If there are Linux virtual machines in the bicep template, you must use SSH for the configuration. Do not use password authentication for the virtual machine if it's Linux.
 
 - Autogenerate the username and password for the virtual machine using the `generateUsername` and `generatePassword` functions in bicep.
 
