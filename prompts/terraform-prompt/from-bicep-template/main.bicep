@@ -1,67 +1,82 @@
-@description('The Azure region where resources will be deployed.')
+// Tutorial: Use a NAT gateway with a hub and spoke network
+// This template creates a hub-spoke network topology with NAT Gateway as described in:
+// https://learn.microsoft.com/en-us/azure/nat-gateway/tutorial-hub-spoke-route-nat
+
+@description('Location for all resources.')
 param location string = resourceGroup().location
 
-@description('Prefix for all resource names.')
-param resourcePrefix string = 'test'
+@description('The name of the NAT gateway.')
+param natGatewayName string = 'nat-gateway'
 
-@description('Address prefix for the hub virtual network.')
-param hubVnetAddressPrefix string = '10.0.0.0/16'
+@description('The name of the hub virtual network.')
+param hubVnetName string = 'vnet-hub'
 
-@description('Address prefix for the spoke virtual network.')
-param spokeVnetAddressPrefix string = '10.1.0.0/16'
+@description('The name of the spoke 1 virtual network.')
+param spoke1VnetName string = 'vnet-spoke-1'
 
-@description('Address prefix for the Azure Firewall subnet.')
-param firewallSubnetAddressPrefix string = '10.0.1.0/26'
-
-@description('Address prefix for the Azure Bastion subnet.')
-param bastionSubnetAddressPrefix string = '10.0.2.0/27'
-
-@description('Address prefix for the spoke private subnet.')
-param spokeSubnetAddressPrefix string = '10.1.0.0/24'
-
-@description('NAT Gateway idle timeout in minutes.')
-param natGatewayIdleTimeout int = 4
-
-@description('Virtual machine size.')
-param vmSize string = 'Standard_D2s_v3'
-
-@description('The Ubuntu version for the VM.')
-@allowed([
-  'Ubuntu-2004'
-  'Ubuntu-2204'
-])
-param ubuntuOSVersion string = 'Ubuntu-2204'
+@description('The name of the spoke 2 virtual network.')
+param spoke2VnetName string = 'vnet-spoke-2'
 
 @description('Username for the Virtual Machine.')
 param adminUsername string = 'azureuser'
 
-@description('Type of authentication to use on the Virtual Machine.')
+@description('SSH Key for the Virtual Machine.')
+@secure()
+param adminPasswordOrKey string
+
+@description('Type of authentication to use on the Virtual Machine. SSH key is recommended.')
 @allowed([
   'sshPublicKey'
   'password'
 ])
 param authenticationType string = 'password'
 
-@description('SSH Key or password for the Virtual Machine.')
-@secure()
-param adminPasswordOrKey string
+@description('The size of the NVA VM')
+param nvaVmSize string = 'Standard_B2s'
 
-// Variables
-var imageReference = {
-  'Ubuntu-2004': {
-    publisher: 'Canonical'
-    offer: '0001-com-ubuntu-server-focal'
-    sku: '20_04-lts-gen2'
-    version: 'latest'
-  }
-  'Ubuntu-2204': {
-    publisher: 'Canonical'
-    offer: '0001-com-ubuntu-server-jammy'
-    sku: '22_04-lts-gen2'
-    version: 'latest'
-  }
-}
+@description('The size of the test VMs')
+param testVmSize string = 'Standard_B2s'
 
+// NAT Gateway variables
+var natGatewayPublicIPName = 'public-ip-nat'
+var bastionPublicIPName = 'public-ip-bastion'
+
+// Hub network variables
+var hubVnetAddressSpace = '10.0.0.0/16'
+var hubPrivateSubnetName = 'subnet-private'
+var hubPrivateSubnetAddress = '10.0.0.0/24'
+var hubPublicSubnetName = 'subnet-public'
+var hubPublicSubnetAddress = '10.0.253.0/28'
+var hubBastionSubnetAddress = '10.0.1.0/26'
+
+// Spoke 1 network variables
+var spoke1VnetAddressSpace = '10.1.0.0/16'
+var spoke1SubnetName = 'subnet-private'
+var spoke1SubnetAddress = '10.1.0.0/24'
+
+// Spoke 2 network variables
+var spoke2VnetAddressSpace = '10.2.0.0/16'
+var spoke2SubnetName = 'subnet-private'
+var spoke2SubnetAddress = '10.2.0.0/24'
+
+// NVA variables
+var nvaVmName = 'vm-nva'
+var nvaPrivateIP = '10.0.0.10'
+var nvaPublicIP = '10.0.253.10'
+var nvaNsgName = 'nsg-nva'
+
+// Spoke VM variables
+var spoke1VmName = 'vm-spoke-1'
+var spoke1NsgName = 'nsg-spoke-1'
+var spoke2VmName = 'vm-spoke-2'
+var spoke2NsgName = 'nsg-spoke-2'
+
+// Route table variables
+var hubRouteTableName = 'route-table-nat-hub'
+var spoke1RouteTableName = 'route-table-nat-spoke-1'
+var spoke2RouteTableName = 'route-table-nat-spoke-2'
+
+// SSH configuration for Linux VM
 var linuxConfiguration = {
   disablePasswordAuthentication: true
   ssh: {
@@ -74,21 +89,202 @@ var linuxConfiguration = {
   }
 }
 
-// Hub Virtual Network
-resource hubVnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
-  name: '${resourcePrefix}-vnet-hub'
+// Create NAT Gateway public IP
+resource natPublicIP 'Microsoft.Network/publicIPAddresses@2024-05-01' = {
+  name: natGatewayPublicIPName
+  location: location
+  sku: {
+    name: 'Standard'
+    tier: 'Regional'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+    publicIPAddressVersion: 'IPv4'
+    idleTimeoutInMinutes: 4
+  }
+}
+
+// Create NAT Gateway
+resource natGateway 'Microsoft.Network/natGateways@2024-05-01' = {
+  name: natGatewayName
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    idleTimeoutInMinutes: 4
+    publicIpAddresses: [
+      {
+        id: natPublicIP.id
+      }
+    ]
+  }
+}
+
+// Create Bastion public IP
+resource bastionPublicIP 'Microsoft.Network/publicIPAddresses@2024-05-01' = {
+  name: bastionPublicIPName
+  location: location
+  sku: {
+    name: 'Standard'
+    tier: 'Regional'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+    publicIPAddressVersion: 'IPv4'
+  }
+}
+
+// Create Hub Route Table
+resource hubRouteTable 'Microsoft.Network/routeTables@2024-05-01' = {
+  name: hubRouteTableName
+  location: location
+  properties: {
+    disableBgpRoutePropagation: false
+    routes: [
+      {
+        name: 'default-via-nat-hub'
+        properties: {
+          addressPrefix: '0.0.0.0/0'
+          nextHopType: 'VirtualAppliance'
+          nextHopIpAddress: nvaPrivateIP
+        }
+      }
+    ]
+  }
+}
+
+// Create Spoke 1 Route Table
+resource spoke1RouteTable 'Microsoft.Network/routeTables@2024-05-01' = {
+  name: spoke1RouteTableName
+  location: location
+  properties: {
+    disableBgpRoutePropagation: false
+    routes: [
+      {
+        name: 'default-via-nat-spoke-1'
+        properties: {
+          addressPrefix: '0.0.0.0/0'
+          nextHopType: 'VirtualAppliance'
+          nextHopIpAddress: nvaPrivateIP
+        }
+      }
+    ]
+  }
+}
+
+// Create Spoke 2 Route Table
+resource spoke2RouteTable 'Microsoft.Network/routeTables@2024-05-01' = {
+  name: spoke2RouteTableName
+  location: location
+  properties: {
+    disableBgpRoutePropagation: false
+    routes: [
+      {
+        name: 'default-via-nat-spoke-2'
+        properties: {
+          addressPrefix: '0.0.0.0/0'
+          nextHopType: 'VirtualAppliance'
+          nextHopIpAddress: nvaPrivateIP
+        }
+      }
+    ]
+  }
+}
+
+// Create NSG for NVA
+resource nvaNsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
+  name: nvaNsgName
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'SSH'
+        properties: {
+          priority: 1000
+          protocol: 'Tcp'
+          access: 'Allow'
+          direction: 'Inbound'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '22'
+        }
+      }
+    ]
+  }
+}
+
+// Create NSG for Spoke 1
+resource spoke1Nsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
+  name: spoke1NsgName
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'HTTP'
+        properties: {
+          priority: 1000
+          protocol: 'Tcp'
+          access: 'Allow'
+          direction: 'Inbound'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '80'
+        }
+      }
+    ]
+  }
+}
+
+// Create NSG for Spoke 2
+resource spoke2Nsg 'Microsoft.Network/networkSecurityGroups@2024-05-01' = {
+  name: spoke2NsgName
+  location: location
+  properties: {
+    securityRules: [
+      {
+        name: 'HTTP'
+        properties: {
+          priority: 1000
+          protocol: 'Tcp'
+          access: 'Allow'
+          direction: 'Inbound'
+          sourceAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationAddressPrefix: '*'
+          destinationPortRange: '80'
+        }
+      }
+    ]
+  }
+}
+
+// Create Hub Virtual Network
+resource hubVnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
+  name: hubVnetName
   location: location
   properties: {
     addressSpace: {
       addressPrefixes: [
-        hubVnetAddressPrefix
+        hubVnetAddressSpace
       ]
     }
     subnets: [
       {
-        name: 'AzureFirewallSubnet'
+        name: hubPrivateSubnetName
         properties: {
-          addressPrefix: firewallSubnetAddressPrefix
+          addressPrefix: hubPrivateSubnetAddress
+          routeTable: {
+            id: hubRouteTable.id
+          }
+        }
+      }
+      {
+        name: hubPublicSubnetName
+        properties: {
+          addressPrefix: hubPublicSubnetAddress
           natGateway: {
             id: natGateway.id
           }
@@ -97,33 +293,30 @@ resource hubVnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
       {
         name: 'AzureBastionSubnet'
         properties: {
-          addressPrefix: bastionSubnetAddressPrefix
+          addressPrefix: hubBastionSubnetAddress
         }
       }
     ]
   }
 }
 
-// Spoke Virtual Network
-resource spokeVnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
-  name: '${resourcePrefix}-vnet-spoke'
+// Create Spoke 1 Virtual Network
+resource spoke1Vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
+  name: spoke1VnetName
   location: location
   properties: {
     addressSpace: {
       addressPrefixes: [
-        spokeVnetAddressPrefix
+        spoke1VnetAddressSpace
       ]
     }
     subnets: [
       {
-        name: 'subnet-private'
+        name: spoke1SubnetName
         properties: {
-          addressPrefix: spokeSubnetAddressPrefix
+          addressPrefix: spoke1SubnetAddress
           routeTable: {
-            id: routeTableSpoke.id
-          }
-          networkSecurityGroup: {
-            id: nsgSpoke.id
+            id: spoke1RouteTable.id
           }
         }
       }
@@ -131,187 +324,49 @@ resource spokeVnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
   }
 }
 
-// Public IP for NAT Gateway
-resource natGatewayPublicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
-  name: '${resourcePrefix}-public-ip-nat'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-  }
-}
-
-// NAT Gateway
-resource natGateway 'Microsoft.Network/natGateways@2023-09-01' = {
-  name: '${resourcePrefix}-nat-gateway'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    idleTimeoutInMinutes: natGatewayIdleTimeout
-    publicIpAddresses: [
-      {
-        id: natGatewayPublicIp.id
-      }
-    ]
-  }
-}
-
-// Public IP for Azure Bastion
-resource bastionPublicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
-  name: '${resourcePrefix}-public-ip-bastion'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-  }
-}
-
-// Azure Bastion
-resource bastion 'Microsoft.Network/bastionHosts@2023-09-01' = {
-  name: '${resourcePrefix}-bastion'
+// Create Spoke 2 Virtual Network
+resource spoke2Vnet 'Microsoft.Network/virtualNetworks@2024-05-01' = {
+  name: spoke2VnetName
   location: location
   properties: {
-    ipConfigurations: [
-      {
-        name: 'ipconfig1'
-        properties: {
-          subnet: {
-            id: '${hubVnet.id}/subnets/AzureBastionSubnet'
-          }
-          publicIPAddress: {
-            id: bastionPublicIp.id
-          }
-        }
-      }
-    ]
-  }
-}
-
-// Public IP for Azure Firewall
-resource firewallPublicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
-  name: '${resourcePrefix}-public-ip-firewall'
-  location: location
-  sku: {
-    name: 'Standard'
-  }
-  properties: {
-    publicIPAllocationMethod: 'Static'
-    publicIPAddressVersion: 'IPv4'
-  }
-}
-
-// Firewall Policy
-resource firewallPolicy 'Microsoft.Network/firewallPolicies@2023-09-01' = {
-  name: '${resourcePrefix}-firewall-policy'
-  location: location
-  properties: {}
-}
-
-// Rule Collection Group
-resource ruleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-09-01' = {
-  parent: firewallPolicy
-  name: 'DefaultNetworkRuleCollectionGroup'
-  properties: {
-    priority: 200
-    ruleCollections: [
-      {
-        ruleCollectionType: 'FirewallPolicyFilterRuleCollection'
-        name: 'spoke-to-internet'
-        priority: 100
-        action: {
-          type: 'Allow'
-        }
-        rules: [
-          {
-            ruleType: 'NetworkRule'
-            name: 'spoke-internet-access'
-            ipProtocols: ['TCP', 'UDP']
-            sourceAddresses: [spokeSubnetAddressPrefix]
-            destinationAddresses: ['*']
-            destinationPorts: ['*']
-          }
-        ]
-      }
-    ]
-  }
-}
-
-// Azure Firewall
-resource firewall 'Microsoft.Network/azureFirewalls@2023-09-01' = {
-  name: '${resourcePrefix}-firewall'
-  location: location
-  properties: {
-    sku: {
-      name: 'AZFW_VNet'
-      tier: 'Standard'
+    addressSpace: {
+      addressPrefixes: [
+        spoke2VnetAddressSpace
+      ]
     }
-    ipConfigurations: [
+    subnets: [
       {
-        name: 'ipconfig1'
+        name: spoke2SubnetName
         properties: {
-          subnet: {
-            id: '${hubVnet.id}/subnets/AzureFirewallSubnet'
+          addressPrefix: spoke2SubnetAddress
+          routeTable: {
+            id: spoke2RouteTable.id
           }
-          publicIPAddress: {
-            id: firewallPublicIp.id
-          }
-        }
-      }
-    ]
-    firewallPolicy: {
-      id: firewallPolicy.id
-    }
-  }
-  dependsOn: [
-    ruleCollectionGroup
-  ]
-}
-
-// Route Table for Spoke
-resource routeTableSpoke 'Microsoft.Network/routeTables@2023-09-01' = {
-  name: '${resourcePrefix}-route-table-spoke'
-  location: location
-  properties: {
-    routes: [
-      {
-        name: 'default-to-firewall'
-        properties: {
-          addressPrefix: '0.0.0.0/0'
-          nextHopType: 'VirtualAppliance'
-          nextHopIpAddress: firewall.properties.ipConfigurations[0].properties.privateIPAddress
         }
       }
     ]
   }
 }
 
-// VNet Peering Hub to Spoke
-resource peeringHubToSpoke 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-09-01' = {
+// Create peering from hub to spoke 1
+resource hubToSpoke1Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2024-05-01' = {
   parent: hubVnet
-  name: 'vnet-hub-to-vnet-spoke'
+  name: 'vnet-hub-to-vnet-spoke-1'
   properties: {
     allowVirtualNetworkAccess: true
     allowForwardedTraffic: true
     allowGatewayTransit: false
     useRemoteGateways: false
     remoteVirtualNetwork: {
-      id: spokeVnet.id
+      id: spoke1Vnet.id
     }
   }
 }
 
-// VNet Peering Spoke to Hub
-resource peeringSpokeToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-09-01' = {
-  parent: spokeVnet
-  name: 'vnet-spoke-to-vnet-hub'
+// Create peering from spoke 1 to hub
+resource spoke1ToHubPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2024-05-01' = {
+  parent: spoke1Vnet
+  name: 'vnet-spoke-1-to-vnet-hub'
   properties: {
     allowVirtualNetworkAccess: true
     allowForwardedTraffic: true
@@ -323,74 +378,285 @@ resource peeringSpokeToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeer
   }
 }
 
-// Network Security Group for Spoke
-resource nsgSpoke 'Microsoft.Network/networkSecurityGroups@2023-09-01' = {
-  name: '${resourcePrefix}-nsg-spoke'
-  location: location
+// Create peering from hub to spoke 2
+resource hubToSpoke2Peering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2024-05-01' = {
+  parent: hubVnet
+  name: 'vnet-hub-to-vnet-spoke-2'
   properties: {
-    securityRules: []
+    allowVirtualNetworkAccess: true
+    allowForwardedTraffic: true
+    allowGatewayTransit: false
+    useRemoteGateways: false
+    remoteVirtualNetwork: {
+      id: spoke2Vnet.id
+    }
   }
 }
 
-// Network Interface for VM
-resource vmNic 'Microsoft.Network/networkInterfaces@2023-09-01' = {
-  name: '${resourcePrefix}-vm-spoke-nic'
+// Create peering from spoke 2 to hub
+resource spoke2ToHubPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2024-05-01' = {
+  parent: spoke2Vnet
+  name: 'vnet-spoke-2-to-vnet-hub'
+  properties: {
+    allowVirtualNetworkAccess: true
+    allowForwardedTraffic: true
+    allowGatewayTransit: false
+    useRemoteGateways: false
+    remoteVirtualNetwork: {
+      id: hubVnet.id
+    }
+  }
+}
+
+// Create Azure Bastion
+resource bastion 'Microsoft.Network/bastionHosts@2024-05-01' = {
+  name: 'bastion'
   location: location
+  sku: {
+    name: 'Basic'
+  }
   properties: {
     ipConfigurations: [
       {
-        name: 'ipconfig1'
+        name: 'IpConf'
         properties: {
-          privateIPAllocationMethod: 'Dynamic'
           subnet: {
-            id: '${spokeVnet.id}/subnets/subnet-private'
+            id: '${hubVnet.id}/subnets/AzureBastionSubnet'
+          }
+          publicIPAddress: {
+            id: bastionPublicIP.id
           }
         }
       }
     ]
+  }
+}
+
+// Create NVA primary network interface (public subnet)
+resource nvaPrimaryNic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
+  name: '${nvaVmName}-nic-primary'
+  location: location
+  properties: {
+    enableIPForwarding: true
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          subnet: {
+            id: '${hubVnet.id}/subnets/${hubPublicSubnetName}'
+          }
+          privateIPAllocationMethod: 'Static'
+          privateIPAddress: nvaPublicIP
+        }
+      }
+    ]
     networkSecurityGroup: {
-      id: nsgSpoke.id
+      id: nvaNsg.id
     }
   }
 }
 
-// Virtual Machine
-resource vm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
-  name: '${resourcePrefix}-vm-spoke'
+// Create NVA secondary network interface (private subnet)
+resource nvaSecondaryNic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
+  name: '${nvaVmName}-nic-private'
+  location: location
+  properties: {
+    enableIPForwarding: true
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          subnet: {
+            id: '${hubVnet.id}/subnets/${hubPrivateSubnetName}'
+          }
+          privateIPAllocationMethod: 'Static'
+          privateIPAddress: nvaPrivateIP
+        }
+      }
+    ]
+    networkSecurityGroup: {
+      id: nvaNsg.id
+    }
+  }
+}
+
+// Create NVA Virtual Machine
+resource nvaVm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
+  name: nvaVmName
   location: location
   properties: {
     hardwareProfile: {
-      vmSize: vmSize
-    }
-    osProfile: {
-      computerName: '${resourcePrefix}-vm-spoke'
-      adminUsername: adminUsername
-      adminPassword: adminPasswordOrKey
-      linuxConfiguration: authenticationType == 'password' ? null : linuxConfiguration
+      vmSize: nvaVmSize
     }
     storageProfile: {
-      imageReference: imageReference[ubuntuOSVersion]
       osDisk: {
         createOption: 'FromImage'
         managedDisk: {
           storageAccountType: 'Standard_LRS'
         }
       }
+      imageReference: {
+        publisher: 'Canonical'
+        offer: '0001-com-ubuntu-server-jammy'
+        sku: '22_04-lts-gen2'
+        version: 'latest'
+      }
     }
     networkProfile: {
       networkInterfaces: [
         {
-          id: vmNic.id
+          id: nvaPrimaryNic.id
+          properties: {
+            primary: true
+          }
+        }
+        {
+          id: nvaSecondaryNic.id
+          properties: {
+            primary: false
+          }
         }
       ]
+    }
+    osProfile: {
+      computerName: nvaVmName
+      adminUsername: adminUsername
+      adminPassword: adminPasswordOrKey
+      linuxConfiguration: ((authenticationType == 'password') ? null : linuxConfiguration)
+    }
+  }
+}
+
+// Create Spoke 1 VM network interface
+resource spoke1VmNic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
+  name: '${spoke1VmName}-nic'
+  location: location
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          subnet: {
+            id: '${spoke1Vnet.id}/subnets/${spoke1SubnetName}'
+          }
+          privateIPAllocationMethod: 'Dynamic'
+        }
+      }
+    ]
+    networkSecurityGroup: {
+      id: spoke1Nsg.id
+    }
+  }
+}
+
+// Create Spoke 1 Virtual Machine
+resource spoke1Vm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
+  name: spoke1VmName
+  location: location
+  properties: {
+    hardwareProfile: {
+      vmSize: testVmSize
+    }
+    storageProfile: {
+      osDisk: {
+        createOption: 'FromImage'
+        managedDisk: {
+          storageAccountType: 'Standard_LRS'
+        }
+      }
+      imageReference: {
+        publisher: 'MicrosoftWindowsServer'
+        offer: 'WindowsServer'
+        sku: '2022-datacenter-g2'
+        version: 'latest'
+      }
+    }
+    networkProfile: {
+      networkInterfaces: [
+        {
+          id: spoke1VmNic.id
+        }
+      ]
+    }
+    osProfile: {
+      computerName: spoke1VmName
+      adminUsername: adminUsername
+      adminPassword: adminPasswordOrKey
+      windowsConfiguration: {
+        enableAutomaticUpdates: true
+        provisionVMAgent: true
+      }
+    }
+  }
+}
+
+// Create Spoke 2 VM network interface
+resource spoke2VmNic 'Microsoft.Network/networkInterfaces@2024-05-01' = {
+  name: '${spoke2VmName}-nic'
+  location: location
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          subnet: {
+            id: '${spoke2Vnet.id}/subnets/${spoke2SubnetName}'
+          }
+          privateIPAllocationMethod: 'Dynamic'
+        }
+      }
+    ]
+    networkSecurityGroup: {
+      id: spoke2Nsg.id
+    }
+  }
+}
+
+// Create Spoke 2 Virtual Machine
+resource spoke2Vm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
+  name: spoke2VmName
+  location: location
+  properties: {
+    hardwareProfile: {
+      vmSize: testVmSize
+    }
+    storageProfile: {
+      osDisk: {
+        createOption: 'FromImage'
+        managedDisk: {
+          storageAccountType: 'Standard_LRS'
+        }
+      }
+      imageReference: {
+        publisher: 'MicrosoftWindowsServer'
+        offer: 'WindowsServer'
+        sku: '2022-datacenter-g2'
+        version: 'latest'
+      }
+    }
+    networkProfile: {
+      networkInterfaces: [
+        {
+          id: spoke2VmNic.id
+        }
+      ]
+    }
+    osProfile: {
+      computerName: spoke2VmName
+      adminUsername: adminUsername
+      adminPassword: adminPasswordOrKey
+      windowsConfiguration: {
+        enableAutomaticUpdates: true
+        provisionVMAgent: true
+      }
     }
   }
 }
 
 // Outputs
-output hubVnetId string = hubVnet.id
-output spokeVnetId string = spokeVnet.id
-output firewallPrivateIp string = firewall.properties.ipConfigurations[0].properties.privateIPAddress
-output natGatewayPublicIp string = natGatewayPublicIp.properties.ipAddress
-output bastionHostname string = bastion.properties.dnsName
-output vmPrivateIp string = vmNic.properties.ipConfigurations[0].properties.privateIPAddress
+output natGatewayPublicIP string = natPublicIP.properties.ipAddress
+output bastionFqdn string = bastion.properties.dnsName
+output adminUsername string = adminUsername
+output nvaPrivateIP string = nvaPrivateIP
+output spoke1VmPrivateIP string = spoke1VmNic.properties.ipConfigurations[0].properties.privateIPAddress
+output spoke2VmPrivateIP string = spoke2VmNic.properties.ipConfigurations[0].properties.privateIPAddress
