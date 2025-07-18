@@ -1,0 +1,26 @@
+# Agenda for MCP Server Redux Session
+- Introduction
+    - Overview of the session objectives
+    - Introduction of presenters: Michael Chase and Allen
+- MCP Server Redux
+    - Architecture and design principles
+    - Key features and functionalities
+    - Real-world applications and case studies
+- Introduce the teams different projects
+    - Michael
+        - General MCP Prompts
+    - Allen
+        - Creation of Bicep templates from articles
+        - Conversion to Terraform templates
+        - Automated testing and fixing
+    - Chase
+        - Research on Azure topics
+        - Mock diagrams and migration-related content
+        - Competitive intelligence
+- Interactive Working Session
+    - Prework and sandbox environment setup
+    - Hands-on activities and collaborative exercises
+- Q&A Session
+    - Open floor for questions and discussions
+- Conclusion
+- Next steps and follow-up actions
